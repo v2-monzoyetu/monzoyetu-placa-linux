@@ -208,7 +208,7 @@ function App() {
           tile.subtitle = item.nome || "n/a";
           tile.status = checkValidation ? <CheckCheck color="green" size={20}/> : <AlertCircle color="yellow" size={20}/>;
           if (checkValidation) {
-            await invoke("set_relay", { pin: 17, state: true });
+            await invoke("set_relay", { cmd: { pin: 34, state: true } });            
             setProcessArea(<ProcessStatus tipo={"Funcionário"} funcionario={item}/>);
           }
         } else if (qrdata.type === "resident") {
@@ -216,7 +216,7 @@ function App() {
           tile.subtitle = item.nome || "n/a";
           tile.status = checkValidation ? <CheckCheck color="green" size={20}/> : <AlertCircle color="yellow" size={20}/>;
           if (checkValidation) {
-            await invoke("set_relay", { pin: 17, state: true });
+            await invoke("set_relay", { cmd: { pin: 34, state: true } });   
             setProcessArea(<ProcessStatus tipo={"Morador"} morador={item}/>);
           }
         } else if (qrdata.type === "vehicle") {
@@ -228,7 +228,7 @@ function App() {
           tile.subtitle = item.matricula || "n/a";
           tile.status = checkValidation ? <CheckCheck color="green" size={20}/> : <AlertCircle color="yellow" size={20}/>;
           if (checkValidation) {
-            await invoke("set_relay", { pin: 17, state: true });
+            await invoke("set_relay", { cmd: { pin: 34, state: true } });   
             setProcessArea(<ProcessStatus tipo={"Veículo"} veiculo={item}/>);
           }
         } else if (qrdata.type === "visitor") {
@@ -236,7 +236,7 @@ function App() {
           tile.subtitle = item.nome || "n/a";
           tile.status = checkValidation ? <CheckCheck color="green" size={20}/> : <AlertCircle color="yellow" size={20}/>;
           if (checkValidation) {
-            await invoke("set_relay", { pin: 17, state: true });
+            await invoke("set_relay", { cmd: { pin: 34, state: true } });   
             setProcessArea(<ProcessStatus tipo={"Visitante"} visitor={item}/>);
           }
         }
@@ -383,7 +383,14 @@ function App() {
                       <DialogHeader>
                         <DialogTitle>Check</DialogTitle>
                         <DialogDescription>
-                        
+                        <Button onClick={async()=>{
+                          const data = await invoke("set_relay", { cmd: { pin: 34, state: true } });
+                          console.log(data)
+                          setTimeout(async() => {
+                            const data2 =await invoke("set_relay", { cmd: { pin: 34, state: false } });
+                            console.log(data2)
+                          }, 5000);
+                        }}>Check</Button>
                         </DialogDescription>
                       </DialogHeader>
                     </DialogContent>

@@ -10,7 +10,9 @@ use std::{thread, time::Duration};
 use tauri::{Manager, Emitter};
 use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
 use std::io::{self, Read};
-use std::process::Command;
+use std::process::{Command, Stdio};
+use std::io::Write;
+use tauri::command;
 
 #[derive(serde::Deserialize)]
 struct RelayCommand {
@@ -62,21 +64,54 @@ fn start_uart(app_handle: tauri::AppHandle, configs: Vec<UARTConfig>) {
 }
 
 #[tauri::command]
-fn set_relay(cmd: RelayCommand) -> Result<(), String> {
-    // Define o pino como saída
-    Command::new("gpio")
-        .args(["mode", &cmd.pin.to_string(), "out"])
-        .output()
-        .map_err(|e| e.to_string())?;
+fn set_relay(cmd: RelayCommand) -> Result<String, String> {
+    let state = if cmd.state { "0" } else { "1" };
+    let sudo_password = "orangepi"; // ⚠️ cuidado, apenas para teste/debug
 
-    // Liga (1) ou desliga (0)
-    let value = if cmd.state { "1" } else { "0" };
-    Command::new("gpio")
-        .args(["write", &cmd.pin.to_string(), value])
-        .output()
-        .map_err(|e| e.to_string())?;
+    println!("DEBUG: Chamando Python com sudo");
+    println!("DEBUG: pin={}, state={}", cmd.pin, state);
 
-    Ok(())
+    let mut child = Command::new("sudo")
+        .arg("-S")
+        .arg("python3")
+        .arg("/home/orangepi/Documents/set_relay.py")
+        .arg(&cmd.pin.to_string())
+        .arg(state)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("Falha ao spawn do processo: {}", e))?;
+
+    println!("DEBUG: Processo iniciado");
+
+    if let Some(stdin) = child.stdin.as_mut() {
+        stdin
+            .write_all(format!("{}\n", sudo_password).as_bytes())
+            .map_err(|e| format!("Falha ao escrever senha no stdin: {}", e))?;
+        println!("DEBUG: Senha enviada para sudo");
+    } else {
+        println!("DEBUG: stdin do processo não disponível!");
+    }
+
+    let output = child
+        .wait_with_output()
+        .map_err(|e| format!("Falha ao aguardar processo: {}", e))?;
+
+    println!("DEBUG: stdout:\n{}", String::from_utf8_lossy(&output.stdout));
+    println!("DEBUG: stderr:\n{}", String::from_utf8_lossy(&output.stderr));
+
+    if !output.status.success() {
+        return Err(format!(
+            "Erro ao acionar GPIO: status={} stderr={}",
+            output.status,
+            String::from_utf8_lossy(&output.stderr)
+        ));
+    }
+
+    println!("DEBUG: GPIO acionado com sucesso");
+
+    Ok("GPIO acionado com sucesso".into())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

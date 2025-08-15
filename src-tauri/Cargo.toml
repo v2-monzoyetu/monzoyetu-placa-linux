@@ -24,4 +24,4 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tauri-plugin-http = "2"
 serialport = "4.7.2"
-
+gpio-cdev = "0.5"
